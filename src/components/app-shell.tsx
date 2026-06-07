@@ -74,7 +74,7 @@ export function Breadcrumbs({ items }: { items: { label: string; href?: string }
   return (
     <nav className="flex items-center gap-1.5 text-sm text-[var(--text-muted)] flex-wrap">
       {items.map((item, i) => (
-        <span key={item.label} className="flex items-center gap-1.5">
+        <span key={`${i}-${item.href ?? item.label}`} className="flex items-center gap-1.5">
           {i > 0 && <span>/</span>}
           {item.href ? (
             <Link href={item.href} className="hover:text-[var(--accent)] transition-colors">

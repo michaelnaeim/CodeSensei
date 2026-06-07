@@ -116,7 +116,7 @@ export default function LearnPage() {
             items={[
               { label: repo.name, href: `/repos/${repoId}` },
               { label: topic.title, href: `/repos/${repoId}/${topicId}` },
-              { label: file.title },
+              { label: file.path },
             ]}
           />
           <MasteryRing value={entry?.mastery ?? 0} />
