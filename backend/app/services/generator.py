@@ -14,6 +14,22 @@ class CachedFile:
     content: str
 
 
+def _coerce_lesson(lesson) -> str:
+    """The lesson column stores markdown text, but Gemini sometimes returns
+    a structured object instead of a string. Normalize any shape to text."""
+    if isinstance(lesson, str):
+        return lesson
+    if isinstance(lesson, dict):
+        title = lesson.get("title")
+        body = lesson.get("content") or lesson.get("body") or lesson.get("text")
+        if body is not None:
+            return f"# {title}\n\n{body}" if title else str(body)
+        return json.dumps(lesson, indent=2)
+    if isinstance(lesson, list):
+        return "\n\n".join(_coerce_lesson(item) for item in lesson)
+    return str(lesson)
+
+
 async def get_topic_files(github: GitHubService, repo: Repo, file_refs: list[str]) -> list[CachedFile]:
     """Return file contents for the given refs, preferring the cache built
     during indexing. Falls back to the GitHub contents API only for files
@@ -89,7 +105,7 @@ class GeneratorService:
 
         content = TopicContent(
             topic_id=topic.id,
-            lesson=result.get("lesson", ""),
+            lesson=_coerce_lesson(result.get("lesson", "")),
             flashcards=result.get("flashcards", []),
             annotations=result.get("annotations", []),
             challenge=result.get("challenge", {}),
