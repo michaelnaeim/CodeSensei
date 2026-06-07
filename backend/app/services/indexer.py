@@ -88,8 +88,8 @@ class IndexerService:
 
     def _extract_topics(self, repo: Repo, files: list[RepoFile]) -> list[dict]:
         file_bundle = []
-        for file in files[:45]:
-            snippet = file.content[:5000]
+        for file in files[:120]:
+            snippet = file.content[:9000]
             file_bundle.append({"path": file.path, "content": snippet})
 
         system_prompt = (
