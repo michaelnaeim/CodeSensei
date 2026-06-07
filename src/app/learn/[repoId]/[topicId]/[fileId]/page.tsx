@@ -4,15 +4,23 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Award } from "lucide-react";
+import { Award, Loader2 } from "lucide-react";
 import { AppHeader, Breadcrumbs, MasteryRing, StepTabs } from "@/components/app-shell";
 import { FlashcardDeck } from "@/components/learn/flashcard-deck";
 import { LessonSplitView } from "@/components/learn/lesson-view";
 import { CodeWithNotes } from "@/components/learn/code-with-notes";
 import { ChallengeView } from "@/components/learn/challenge-view";
 import { QuizView } from "@/components/learn/quiz-view";
-import { getRepo, getTopic } from "@/lib/demo-data";
+import {
+  getChallenge,
+  getQuiz,
+  getRepo,
+  getTopicCode,
+  getTopicDetail,
+} from "@/lib/api";
+import { buildTopic, mapRepo } from "@/lib/api-mappers";
 import { useAppStore } from "@/lib/store";
+import type { Repo, Topic, TopicFile } from "@/types";
 
 const STEPS = [
   { id: "flashcards", label: "Flashcards" },
@@ -30,6 +38,11 @@ export default function LearnPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const { user, mastery, updateMastery } = useAppStore();
+  const [repo, setRepo] = useState<Repo | null>(null);
+  const [topic, setTopic] = useState<Topic | null>(null);
+  const [file, setFile] = useState<TopicFile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [step, setStep] = useState("flashcards");
   const [mounted, setMounted] = useState(false);
 
@@ -38,14 +51,54 @@ export default function LearnPage() {
     if (mounted && status === "unauthenticated" && !user) router.push("/");
   }, [mounted, status, user, router]);
 
-  const repo = getRepo(repoId);
-  const topic = getTopic(topicId);
-  const file = topic?.files.find((f) => f.id === fileId);
-  const key = `${repoId}:${topicId}:${fileId}`;
+  useEffect(() => {
+    if (!mounted) return;
+    (async () => {
+      try {
+        const [repoData, detail, codeFiles, challenge, quiz] = await Promise.all([
+          getRepo(repoId),
+          getTopicDetail(topicId),
+          getTopicCode(topicId),
+          getChallenge(topicId),
+          getQuiz(topicId),
+        ]);
+        const mappedRepo = mapRepo(repoData);
+        const mappedTopic = buildTopic(detail, codeFiles, challenge, quiz.questions, repoId);
+        const mappedFile = mappedTopic.files.find((f) => f.id === fileId) ?? mappedTopic.files[0];
+
+        setRepo(mappedRepo);
+        setTopic(mappedTopic);
+        setFile(mappedFile ?? null);
+
+        if (detail.challenge_passed) {
+          updateMastery({ repoId, topicId, fileId: mappedFile?.id ?? "main", challengeDone: true });
+        }
+        if (detail.quiz_passed) {
+          updateMastery({ repoId, topicId, fileId: mappedFile?.id ?? "main", quizPassed: true, quizScore: 100 });
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load lesson");
+      } finally {
+        setLoading(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, repoId, topicId, fileId]);
+
+  const effectiveFileId = file?.id ?? fileId;
+  const key = `${repoId}:${topicId}:${effectiveFileId}`;
   const entry = mastery[key];
 
-  if (!repo || !topic || !file) {
-    return <div className="min-h-screen flex items-center justify-center">Lesson not found</div>;
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-[var(--accent)]" />
+      </div>
+    );
+  }
+
+  if (error || !repo || !topic || !file) {
+    return <div className="min-h-screen flex items-center justify-center">{error || "Lesson not found"}</div>;
   }
 
   const completed = {
@@ -56,7 +109,8 @@ export default function LearnPage() {
     quiz: !!entry?.quizPassed,
   };
 
-  const base = { repoId, topicId, fileId };
+  const base = { repoId, topicId, fileId: effectiveFileId };
+  const moduleCleared = entry?.challengeDone && entry?.quizPassed;
 
   return (
     <>
@@ -112,11 +166,13 @@ export default function LearnPage() {
           {step === "challenge" && (
             <ChallengeView
               challenge={file.challenge}
+              topicId={topicId}
               onComplete={() => updateMastery({ ...base, challengeDone: true })}
             />
           )}
           {step === "quiz" && (
             <QuizView
+              topicId={topicId}
               questions={file.quiz}
               onComplete={(score, passed) =>
                 updateMastery({ ...base, quizScore: score, quizPassed: passed })
@@ -125,13 +181,13 @@ export default function LearnPage() {
           )}
         </div>
 
-        {entry?.quizPassed && (
+        {moduleCleared && (
           <div className="mt-4 panel p-4 flex items-center gap-3 bg-[var(--success-soft)] border-green-200">
             <Award className="w-6 h-6 text-[var(--success)]" />
             <div>
               <p className="font-semibold text-[var(--success)]">Module cleared!</p>
               <p className="text-sm text-[var(--text-secondary)]">
-                You&apos;ve mastered {topic.title} — {file.title}.{" "}
+                You&apos;ve mastered {topic.title}.{" "}
                 <Link href={`/repos/${repoId}/${topicId}`} className="text-[var(--accent)] hover:underline">
                   Back to module
                 </Link>

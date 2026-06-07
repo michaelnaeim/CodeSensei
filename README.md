@@ -15,12 +15,23 @@ Turn any GitHub repository into a structured, interactive curriculum. Learn from
 
 ## Quick start
 
+**1. Backend** (terminal 1):
 ```bash
+cd backend
+python3.12 -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # add GEMINI_API_KEY
+uvicorn app.main:app --reload --port 8000
+```
+
+**2. Frontend** (terminal 2):
+```bash
+cp .env.local.example .env.local
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) and click **Try demo** to explore without GitHub OAuth.
+Open [http://localhost:3000](http://localhost:3000), click **Try demo**, paste a public GitHub URL on the dashboard, and wait for indexing to finish.
 
 ## GitHub OAuth setup
 
@@ -44,3 +55,7 @@ Open [http://localhost:3000](http://localhost:3000) and click **Try demo** to ex
 - Framer Motion
 - Monaco Editor
 - Zustand (mastery persistence)
+
+## Backend
+
+See [backend/README.md](./backend/README.md) for setup and API docs for frontend integration.

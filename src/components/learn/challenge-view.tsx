@@ -4,7 +4,7 @@ import { useState } from "react";
 import dynamic from "next/dynamic";
 import { CheckCircle2, Loader2, Sparkles, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/card";
+import { submitChallenge } from "@/lib/api";
 import type { Challenge } from "@/types";
 
 const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
@@ -12,30 +12,37 @@ const MonacoEditor = dynamic(() => import("@monaco-editor/react"), {
   loading: () => <div className="h-48 loading-shimmer rounded-lg" />,
 });
 
-export function ChallengeView({ challenge, onComplete }: { challenge: Challenge; onComplete: () => void }) {
+export function ChallengeView({
+  challenge,
+  topicId,
+  onComplete,
+}: {
+  challenge: Challenge;
+  topicId: string;
+  onComplete: () => void;
+}) {
   const [mode, setMode] = useState<"code" | "pseudocode">("code");
   const [code, setCode] = useState(challenge.starterCode);
   const [pseudocode, setPseudocode] = useState("");
   const [checking, setChecking] = useState(false);
-  const [result, setResult] = useState<{ passed: boolean; feedback: string; suggestions?: string[] } | null>(null);
+  const [result, setResult] = useState<{ passed: boolean; feedback: string; score?: number } | null>(null);
 
   const check = async () => {
     setChecking(true);
     setResult(null);
     try {
-      const res = await fetch("/api/check-solution", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          challenge: challenge.title,
-          mode,
-          code: mode === "code" ? code : pseudocode,
-          expectedOutput: challenge.expectedOutput,
-        }),
-      });
-      const data = await res.json();
-      setResult(data);
+      const data = await submitChallenge(
+        topicId,
+        mode === "code" ? code : pseudocode,
+        mode
+      );
+      setResult({ passed: data.passed, feedback: data.feedback, score: data.score });
       if (data.passed) onComplete();
+    } catch (e) {
+      setResult({
+        passed: false,
+        feedback: e instanceof Error ? e.message : "Failed to check solution",
+      });
     } finally {
       setChecking(false);
     }
@@ -64,6 +71,9 @@ export function ChallengeView({ challenge, onComplete }: { challenge: Challenge;
             <div className="text-sm">
               <p className="font-medium">{result.passed ? "Accepted" : "Not suitable"}</p>
               <p className="text-[var(--text-secondary)] mt-1">{result.feedback}</p>
+              {result.score !== undefined && (
+                <p className="text-xs text-[var(--text-muted)] mt-1">Score: {result.score}%</p>
+              )}
             </div>
           </div>
         )}
