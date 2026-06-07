@@ -2,79 +2,51 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { signIn, useSession } from "next-auth/react";
+import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { GitBranch, LogOut, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
-export function AppHeader() {
+export function AppHeader({ repoName, backHref }: { repoName?: string; backHref?: string }) {
   const pathname = usePathname();
-  const isApp = pathname.startsWith("/dashboard") || pathname.startsWith("/repos") || pathname.startsWith("/learn");
   const { data: session } = useSession();
-  const { user, setDemoUser, signOut, isDemo } = useAppStore();
+  const { user } = useAppStore();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
-  const isLoggedIn = mounted && (!!session || !!user);
-  const displayName = session?.user?.name ?? user?.name;
-
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--bg-surface)]/95 backdrop-blur-md">
-      <div className="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
-        <Link href={isLoggedIn ? "/dashboard" : "/"} className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-md bg-[var(--accent)] flex items-center justify-center">
-            <Sparkles className="w-3.5 h-3.5 text-white" />
-          </div>
-          <span className="font-[family-name:var(--font-space)] font-semibold text-[15px] tracking-tight">
-            CodeSensi
-          </span>
-        </Link>
-
-        {!isApp && (
-          <nav className="hidden md:flex gap-6 text-sm text-[var(--text-secondary)]">
-            <a href="#features" className="hover:text-[var(--text)]">Features</a>
-            <a href="#flow" className="hover:text-[var(--text)]">How it works</a>
-          </nav>
-        )}
+    <header className="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--bg)]/95 backdrop-blur-md">
+      <div className="max-w-[1400px] mx-auto px-5 h-12 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {backHref && (
+            <Link href={backHref} className="text-[var(--text-muted)] hover:text-[var(--text)] transition-colors">
+              <ArrowLeft className="w-4 h-4" />
+            </Link>
+          )}
+          <Link href="/dashboard" className="font-[family-name:var(--font-jetbrains)] text-[14px] tracking-tight text-[var(--text)]">
+            codesensei
+          </Link>
+          {repoName && (
+            <>
+              <span className="text-[var(--text-muted)]">/</span>
+              <span className="font-[family-name:var(--font-jetbrains)] text-[14px] text-[var(--text-secondary)]">
+                {repoName}
+              </span>
+            </>
+          )}
+        </div>
 
         <div className="flex items-center gap-2">
-          {mounted && isLoggedIn ? (
-            <>
-              {displayName && (
-                <span className="hidden sm:block text-sm text-[var(--text-secondary)] mr-1">
-                  {displayName.split(" ")[0]}
-                  {isDemo && " · demo"}
-                </span>
-              )}
-              <Link href="/dashboard">
-                <Button variant="secondary" size="sm">Repos</Button>
-              </Link>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  signOut();
-                  window.location.href = "/";
-                }}
-              >
-                <LogOut className="w-4 h-4" />
-              </Button>
-            </>
-          ) : mounted ? (
-            <>
-              <Button variant="ghost" size="sm" onClick={() => { setDemoUser(); window.location.href = "/dashboard"; }}>
-                Try demo
-              </Button>
-              <Button variant="primary" size="sm" onClick={() => signIn("github", { callbackUrl: "/dashboard" })}>
-                <GitBranch className="w-4 h-4" />
-                Sign in
-              </Button>
-            </>
+          {mounted && (session || user) ? (
+            <span className="text-xs text-[var(--text-muted)] border border-[var(--border)] rounded-md px-2 py-1">
+              Guest
+            </span>
           ) : (
-            <div className="w-24 h-8" />
+            <span className="text-xs text-[var(--text-muted)] border border-[var(--border)] rounded-md px-2 py-1">
+              Guest
+            </span>
           )}
         </div>
       </div>
@@ -89,7 +61,7 @@ export function MasteryRing({ value, size = 44 }: { value: number; size?: number
       style={{ "--pct": value, width: size, height: size } as React.CSSProperties}
     >
       <div
-        className="rounded-full bg-[var(--bg-surface)] flex items-center justify-center font-semibold text-xs"
+        className="rounded-full bg-[var(--bg-surface)] flex items-center justify-center font-semibold text-xs text-[var(--text)]"
         style={{ width: size - 8, height: size - 8 }}
       >
         {value}%
@@ -138,13 +110,32 @@ export function StepTabs({
             "px-4 py-2 rounded-md text-sm font-medium whitespace-nowrap transition-all cursor-pointer border border-transparent",
             active === step.id
               ? "step-tab-active"
-              : "text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-white"
+              : "text-[var(--text-secondary)] hover:text-[var(--text)] hover:bg-[var(--bg-elevated)]"
           )}
         >
           {step.label}
           {completed[step.id] && <span className="ml-1.5 text-[var(--success)]">✓</span>}
         </button>
       ))}
+    </div>
+  );
+}
+
+export function BottomProgress({ explored, mastered }: { explored: number; mastered: number }) {
+  return (
+    <div className="progress-bottom">
+      <span>PROGRESS</span>
+      <span className="ml-3 flex items-center gap-1">
+        <span className="w-2 h-2 rounded-full bg-[var(--warning)]" />
+        {explored} explored
+      </span>
+      <span className="ml-3 flex items-center gap-1">
+        <span className="w-2 h-2 rounded-full bg-[var(--success)]" />
+        {mastered} mastered
+      </span>
+      <div className="progress-bottom-bar">
+        <div className="progress-bottom-fill" style={{ width: `${mastered * 10}%` }} />
+      </div>
     </div>
   );
 }

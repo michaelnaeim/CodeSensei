@@ -1,28 +1,33 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #fafafa;
-  --bg-surface: #ffffff;
-  --bg-muted: #f4f4f5;
-  --bg-code: #18181b;
-  --border: #e4e4e7;
-  --border-strong: #d4d4d8;
-  --text: #09090b;
-  --text-secondary: #52525b;
-  --text-muted: #a1a1aa;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --accent-soft: #eff6ff;
-  --success: #16a34a;
-  --success-soft: #f0fdf4;
-  --warning: #ea580c;
-  --warning-soft: #fff7ed;
-  --error: #dc2626;
-  --error-soft: #fef2f2;
+  --bg: #0a0a0a;
+  --bg-surface: #161616;
+  --bg-muted: #1a1a1a;
+  --bg-code: #111111;
+  --bg-elevated: #1e1e1e;
+  --border: #262626;
+  --border-strong: #333333;
+  --border-hover: #444444;
+  --text: #e5e5e5;
+  --text-secondary: #a3a3a3;
+  --text-muted: #666666;
+  --accent: #3b82f6;
+  --accent-hover: #60a5fa;
+  --accent-soft: rgba(59,130,246,0.1);
+  --success: #22c55e;
+  --success-soft: rgba(34,197,94,0.1);
+  --warning: #f59e0b;
+  --warning-soft: rgba(245,158,11,0.1);
+  --error: #ef4444;
+  --error-soft: rgba(239,68,68,0.1);
+  --node-active: #f59e0b;
+  --node-active-border: rgba(245,158,11,0.5);
+  --node-active-soft: rgba(245,158,11,0.08);
   --fast: #0ea5e9;
   --good: #8b5cf6;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.08);
+  --shadow: none;
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.4);
 }
 
 @theme inline {
@@ -35,7 +40,7 @@
 
 * { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; color-scheme: dark; }
 
 body {
   background: var(--bg);
@@ -44,14 +49,13 @@ body {
 }
 
 ::selection {
-  background: rgba(37, 99, 235, 0.2);
+  background: rgba(59, 130, 246, 0.3);
 }
 
 .panel {
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: 12px;
-  box-shadow: var(--shadow);
 }
 
 .panel-inset {
@@ -63,7 +67,7 @@ body {
 .step-tab-active {
   background: var(--accent-soft);
   color: var(--accent);
-  border-color: #bfdbfe;
+  border-color: rgba(59,130,246,0.3);
 }
 
 .mastery-ring {
@@ -71,7 +75,7 @@ body {
 }
 
 .code-line-highlight {
-  background: rgba(37, 99, 235, 0.12);
+  background: rgba(59, 130, 246, 0.1);
   border-left: 3px solid var(--accent);
 }
 
@@ -98,10 +102,80 @@ body {
 }
 
 .loading-shimmer {
-  background: linear-gradient(90deg, var(--bg-muted) 25%, #e4e4e7 50%, var(--bg-muted) 75%);
+  background: linear-gradient(90deg, var(--bg-muted) 25%, var(--border) 50%, var(--bg-muted) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
 }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-thumb { background: #d4d4d8; border-radius: 3px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-hover); }
+
+/* React Flow dark overrides */
+.react-flow__background { background: var(--bg) !important; }
+.react-flow__controls button { background: var(--bg-surface) !important; border-color: var(--border) !important; color: var(--text) !important; }
+.react-flow__controls button:hover { background: var(--bg-elevated) !important; }
+.react-flow__minimap { background: var(--bg-surface) !important; border: 1px solid var(--border) !important; border-radius: 8px !important; }
+.react-flow__attribution { display: none !important; }
+
+/* Tag / badge pill */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-muted);
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.tag-active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* Language dot */
+.lang-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+/* Progress bar (bottom) */
+.progress-bottom {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 36px;
+  background: var(--bg-surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  font-size: 12px;
+  color: var(--text-muted);
+  z-index: 50;
+}
+
+.progress-bottom-bar {
+  flex: 1;
+  height: 3px;
+  background: var(--bg-muted);
+  border-radius: 2px;
+  margin-left: 16px;
+  overflow: hidden;
+}
+
+.progress-bottom-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}

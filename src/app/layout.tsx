@@ -20,17 +20,17 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CodeSensi — AI makes you fast. CodeSensi makes you good.",
+  title: "CodeSensei — Learn from real codebases",
   description:
-    "Turn any GitHub repository into a structured, interactive curriculum. Learn from real source code.",
+    "Turn any public GitHub repository into a structured, interactive curriculum. Learn from real source code.",
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${space.variable} ${jetbrains.variable} h-full`}>
-      <body className="min-h-full antialiased">
+    <html lang="en" className={`${inter.variable} ${space.variable} ${jetbrains.variable} h-full dark`}>
+      <body className="min-h-full antialiased bg-[var(--bg)]">
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -4,14 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { AlertCircle, GitBranch, Loader2, Search } from "lucide-react";
-import { AppHeader, MasteryRing } from "@/components/app-shell";
-import { Card, ProgressBar, Badge } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { ArrowRight, Loader2 } from "lucide-react";
+import { AppHeader } from "@/components/app-shell";
 import {
   createRepo,
   getRecentRepos,
-  pollRepoUntilReady,
   saveRecentRepo,
   type RecentRepo,
 } from "@/lib/api";
@@ -20,10 +17,9 @@ import { useAppStore } from "@/lib/store";
 export default function DashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { user } = useAppStore();
+  const { user, setDemoUser } = useAppStore();
   const [repoInput, setRepoInput] = useState("");
   const [analyzing, setAnalyzing] = useState(false);
-  const [indexStatus, setIndexStatus] = useState("");
   const [error, setError] = useState("");
   const [recentRepos, setRecentRepos] = useState<RecentRepo[]>([]);
   const [mounted, setMounted] = useState(false);
@@ -32,112 +28,90 @@ export default function DashboardPage() {
   useEffect(() => {
     if (mounted) setRecentRepos(getRecentRepos());
   }, [mounted]);
-  useEffect(() => {
-    if (mounted && status === "unauthenticated" && !user) router.push("/");
-  }, [mounted, status, user, router]);
 
   const handleAnalyze = async () => {
-    if (!repoInput.trim()) return;
+    const input = repoInput.trim();
+    if (!input) return;
     setAnalyzing(true);
     setError("");
-    setIndexStatus("Starting analysis…");
+    if (!user) setDemoUser();
     try {
-      const repo = await createRepo(repoInput.trim());
-      const ready = await pollRepoUntilReady(repo.id, setIndexStatus);
-      saveRecentRepo(ready);
+      const ghUrl = input.includes("github.com") ? input : `https://github.com/${input}`;
+      const repo = await createRepo(ghUrl);
+      saveRecentRepo(repo);
       setRecentRepos(getRecentRepos());
-      router.push(`/repos/${ready.id}`);
+      router.push(`/repos/${repo.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to analyze repository");
     } finally {
       setAnalyzing(false);
-      setIndexStatus("");
     }
   };
 
-  if (!mounted || (status === "loading" && !user)) {
+  if (!mounted) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-[var(--accent)]" />
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]">
+        <Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" />
       </div>
     );
   }
 
-  if (!session && !user) return null;
-
   return (
-    <>
+    <div className="min-h-screen bg-[var(--bg)]">
       <AppHeader />
-      <main className="max-w-5xl mx-auto px-5 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="font-[family-name:var(--font-space)] text-2xl font-bold">Your repositories</h1>
-            <p className="text-sm text-[var(--text-secondary)] mt-1">
-              Paste any public GitHub URL to generate a curriculum
-            </p>
-          </div>
-          <MasteryRing value={0} size={52} />
-        </div>
+      <main className="max-w-3xl mx-auto px-5 pt-12 pb-20">
+        <h1 className="font-[family-name:var(--font-jetbrains)] text-2xl tracking-tight mb-2">
+          your repos
+        </h1>
+        <p className="text-[var(--text-muted)] text-sm mb-8">
+          paste any public github URL to generate a curriculum
+        </p>
 
-        <div className="panel p-4 mb-4 flex gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--text-muted)]" />
-            <input
-              value={repoInput}
-              onChange={(e) => setRepoInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
-              placeholder="https://github.com/fastapi/fastapi or owner/repo"
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[var(--border)] bg-[var(--bg)] text-sm focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
-            />
-          </div>
-          <Button onClick={handleAnalyze} disabled={analyzing}>
-            {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <GitBranch className="w-4 h-4" />}
-            Analyze
-          </Button>
+        <div className="panel p-4 mb-6 flex gap-3">
+          <input
+            value={repoInput}
+            onChange={(e) => setRepoInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleAnalyze()}
+            placeholder="https://github.com/owner/repo"
+            className="flex-1 bg-[var(--bg)] border border-[var(--border)] rounded-lg px-4 py-2.5 text-sm text-[var(--text)] placeholder:text-[var(--text-muted)] focus:outline-none focus:border-[var(--border-strong)] font-[family-name:var(--font-jetbrains)]"
+          />
+          <button
+            onClick={handleAnalyze}
+            disabled={analyzing}
+            className="px-4 py-2.5 text-sm text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer disabled:opacity-50"
+          >
+            {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : "add"}
+          </button>
         </div>
-
-        {analyzing && indexStatus && (
-          <p className="text-sm text-[var(--accent)] mb-4 flex items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            {indexStatus}
-          </p>
-        )}
 
         {error && (
-          <div className="mb-6 p-4 rounded-lg bg-[var(--error-soft)] border border-red-200 flex gap-3 text-sm">
-            <AlertCircle className="w-5 h-5 text-[var(--error)] shrink-0" />
-            {error}
-          </div>
+          <p className="text-sm text-[var(--error)] mb-4">{error}</p>
         )}
 
         {recentRepos.length === 0 ? (
-          <div className="panel p-10 text-center text-[var(--text-secondary)]">
-            <p>No repositories yet. Paste a GitHub URL above to get started.</p>
+          <div className="panel p-12 text-center text-[var(--text-muted)]">
+            <p>no repositories yet. paste a github URL above to get started.</p>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="space-y-2">
             {recentRepos.map((repo) => (
               <Link key={repo.id} href={`/repos/${repo.id}`}>
-                <Card className="h-full hover:border-[var(--accent)]/40 hover:shadow-md transition-all cursor-pointer group">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <p className="text-xs text-[var(--text-muted)]">{repo.owner}/{repo.name}</p>
-                      <h3 className="font-semibold group-hover:text-[var(--accent)] transition-colors">
-                        {repo.name}
-                      </h3>
-                    </div>
-                    <GitBranch className="w-4 h-4 text-[var(--text-muted)]" />
+                <div className="panel p-4 flex items-center justify-between hover:border-[var(--border-strong)] transition-colors cursor-pointer group">
+                  <div>
+                    <p className="text-sm font-medium text-[var(--text)] group-hover:text-white">
+                      {repo.owner}/{repo.name}
+                    </p>
+                    <p className="text-xs text-[var(--text-muted)] mt-1">
+                      analyzed {new Date(repo.analyzedAt).toLocaleDateString()}
+                    </p>
                   </div>
-                  <p className="text-sm text-[var(--text-secondary)] mb-3 line-clamp-2">
-                    Curriculum generated from real source code
-                  </p>
-                  <Badge variant="info">Public repo</Badge>
-                </Card>
+                  <ArrowRight className="w-4 h-4 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
+                </div>
               </Link>
             ))}
           </div>
         )}
       </main>
-    </>
+    </div>
   );
 }
