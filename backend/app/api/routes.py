@@ -226,13 +226,14 @@ async def get_challenge(topic_id: str, db: Session = Depends(get_db)) -> Challen
 
     content = await generator.ensure_topic_content(db, topic)
     challenge = content.challenge
+    starter_code = challenge.get("starter_code") or challenge.get("starterCode") or ""
     return ChallengeResponse(
         topic_id=topic_id,
-        title=challenge.get("title", topic.title),
-        prompt=challenge.get("prompt", ""),
-        starter_code=challenge.get("starter_code", ""),
+        title=challenge.get("title") or topic.title,
+        prompt=challenge.get("prompt") or "",
+        starter_code=str(starter_code),
         supports_pseudocode=challenge.get("supports_pseudocode", True),
-        examples=challenge.get("examples", []),
+        examples=challenge.get("examples") or [],
     )
 
 
@@ -275,12 +276,12 @@ async def get_quiz(topic_id: str, db: Session = Depends(get_db)) -> QuizResponse
     quiz = content.quiz
     questions = [
         QuizQuestion(
-            id=q["id"],
+            id=str(q.get("id", f"q{i + 1}")),
             type=q.get("type", "multiple_choice"),
-            question=q["question"],
+            question=q.get("question", ""),
             options=q.get("options"),
         )
-        for q in quiz.get("questions", [])
+        for i, q in enumerate(quiz.get("questions", []))
     ]
     return QuizResponse(topic_id=topic_id, title=quiz.get("title", topic.title), questions=questions)
 
