@@ -3,7 +3,12 @@ import json
 from sqlalchemy.orm import Session
 
 from app.models import Repo, Topic
-from app.services.github import GitHubService, ParsedRepoUrl, RepoFile, parse_github_url
+from app.services.github import (
+    GitHubService,
+    RepoFile,
+    detect_frameworks,
+    parse_github_url,
+)
 from app.services.llm import LLMService
 
 
@@ -27,11 +32,12 @@ class IndexerService:
             tree, commit_sha = await self.github.fetch_tree(parsed, branch)
             repo.commit_sha = commit_sha
             repo.file_tree = [item["path"] for item in tree]
-            repo.language_mix = {metadata.get("language") or "unknown": 1}
 
             selected_paths = self.github.select_files_for_indexing(tree)
             files = await self.github.fetch_file_contents(parsed, selected_paths)
             repo.indexed_files = [{"path": f.path, "size": f.size} for f in files]
+
+            repo.language_mix = await self._build_tech_stack(parsed, metadata, files)
             repo.status = "generating"
             db.commit()
 
@@ -60,10 +66,30 @@ class IndexerService:
             db.commit()
             raise
 
+    async def _build_tech_stack(self, parsed, metadata: dict, files: list[RepoFile]) -> dict:
+        """Combine GitHub language byte-counts with detected frameworks."""
+        languages = await self.github.fetch_languages(parsed)
+        if not languages:
+            primary = metadata.get("language")
+            languages = {primary: 1} if primary else {}
+
+        # Keep top languages by byte count
+        top_languages = dict(
+            sorted(languages.items(), key=lambda kv: kv[1], reverse=True)[:6]
+        )
+
+        stack: dict[str, int] = dict(top_languages)
+        for framework in detect_frameworks(files):
+            stack[framework] = stack.get(framework, 0)
+
+        if not stack:
+            stack = {"unknown": 1}
+        return stack
+
     def _extract_topics(self, repo: Repo, files: list[RepoFile]) -> list[dict]:
         file_bundle = []
-        for file in files[:30]:
-            snippet = file.content[:4000]
+        for file in files[:45]:
+            snippet = file.content[:5000]
             file_bundle.append({"path": file.path, "content": snippet})
 
         system_prompt = (
