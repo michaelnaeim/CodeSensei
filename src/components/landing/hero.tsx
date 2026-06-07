@@ -34,7 +34,7 @@ export function Hero() {
           AI makes you{" "}
           <span className="text-[var(--accent-fast)]">fast</span>.
           <br />
-          CodeSensi makes you{" "}
+          CodeSensei makes you{" "}
           <span className="text-[var(--accent-good)]">good</span>.
         </motion.h1>
 

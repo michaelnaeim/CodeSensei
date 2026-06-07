@@ -17,7 +17,7 @@ const features = [
     icon: GitBranch,
     title: "Any repo, any topic",
     description:
-      "Connect private or public GitHub repos. CodeSensi maps specializations like authentication, routing, or middleware automatically.",
+      "Connect private or public GitHub repos. CodeSensei maps specializations like authentication, routing, or middleware automatically.",
     color: "var(--accent-fast)",
   },
   {
@@ -198,10 +198,10 @@ export function Footer() {
     <footer className="py-12 px-6 border-t border-[var(--border)]">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         <p className="font-[family-name:var(--font-syne)] font-bold">
-          Code<span className="text-[var(--accent-good)]">Sensi</span>
+          Code<span className="text-[var(--accent-good)]">Sensei</span>
         </p>
         <p className="text-sm text-[var(--text-muted)]">
-          AI makes you fast. CodeSensi makes you good.
+          AI makes you fast. CodeSensei makes you good.
         </p>
       </div>
     </footer>

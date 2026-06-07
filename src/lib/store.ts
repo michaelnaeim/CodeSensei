@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import type { ExperienceLevel, LearningGoal, LearningStyle } from "@/lib/recommended-repos";
 
 interface MasteryEntry {
   repoId: string;
@@ -20,8 +21,16 @@ interface AppState {
   isDemo: boolean;
   user: { name: string; username: string; avatar: string } | null;
   mastery: Record<string, MasteryEntry>;
+  experience: ExperienceLevel;
+  learningGoals: LearningGoal[];
+  learningStyle: LearningStyle;
   setDemoUser: () => void;
   signOut: () => void;
+  setSettings: (settings: {
+    experience?: ExperienceLevel;
+    learningGoals?: LearningGoal[];
+    learningStyle?: LearningStyle;
+  }) => void;
   updateMastery: (entry: Partial<MasteryEntry> & { repoId: string; topicId: string; fileId: string }) => void;
   getTopicMastery: (repoId: string, topicId: string) => number;
 }
@@ -47,6 +56,9 @@ export const useAppStore = create<AppState>()(
       isDemo: false,
       user: null,
       mastery: {},
+      experience: "intermediate",
+      learningGoals: ["api-design", "auth"],
+      learningStyle: "hands-on",
 
       setDemoUser: () =>
         set({
@@ -59,6 +71,13 @@ export const useAppStore = create<AppState>()(
         }),
 
       signOut: () => set({ isDemo: false, user: null }),
+
+      setSettings: (settings) =>
+        set((state) => ({
+          experience: settings.experience ?? state.experience,
+          learningGoals: settings.learningGoals ?? state.learningGoals,
+          learningStyle: settings.learningStyle ?? state.learningStyle,
+        })),
 
       updateMastery: (partial) => {
         const key = masteryKey(partial.repoId, partial.topicId, partial.fileId);

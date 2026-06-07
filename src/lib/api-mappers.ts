@@ -88,9 +88,11 @@ export function buildTopicFile(
   const primary = codeFiles[0];
   const allCode = codeFiles.map((f) => `// ${f.file_path}\n${f.content}`).join("\n\n");
 
+  const filePath = primary?.file_path ?? detail.file_refs[0] ?? "source";
+
   return {
-    id: "main",
-    path: primary?.file_path ?? detail.file_refs[0] ?? "source",
+    id: detail.id,
+    path: filePath,
     title: detail.title,
     language: primary?.language ?? "typescript",
     sourceCode: primary?.content ?? allCode,

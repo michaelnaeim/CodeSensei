@@ -15,8 +15,11 @@ from app.schemas import (
     QuizSubmitRequest,
     QuizSubmitResponse,
     RepoCreateRequest,
+    RepoListResponse,
     RepoResponse,
+    RepoUsageStats,
     SessionResponse,
+    UsageOverviewResponse,
     TopicCodeResponse,
     TopicDetailResponse,
     TopicListResponse,
@@ -31,6 +34,7 @@ from app.services.github import parse_github_url
 from app.services.grader import GraderService
 from app.services.indexer import IndexerService
 from app.services.progress import get_or_create_progress, progress_for_topic, topic_cleared
+from app.services.usage import all_repo_usage_stats, record_repo_visit, repo_usage_stats
 from app.api.deps import get_optional_session_id, require_session_id
 
 router = APIRouter()
@@ -50,7 +54,8 @@ def _run_index_job(repo_id: str) -> None:
         db.close()
 
 
-def _repo_response(repo: Repo) -> RepoResponse:
+def _repo_response(repo: Repo, usage: dict[str, int] | None = None) -> RepoResponse:
+    stats = usage or {"unique_visitors": 0, "total_views": 0}
     return RepoResponse(
         id=repo.id,
         url=repo.url,
@@ -63,6 +68,10 @@ def _repo_response(repo: Repo) -> RepoResponse:
         file_tree=repo.file_tree,
         created_at=repo.created_at,
         updated_at=repo.updated_at,
+        usage=RepoUsageStats(
+            unique_visitors=stats.get("unique_visitors", 0),
+            total_views=stats.get("total_views", 0),
+        ),
     )
 
 
@@ -96,10 +105,34 @@ def create_session(db: Session = Depends(get_db)) -> SessionResponse:
     return SessionResponse(session_id=session.id)
 
 
+@router.get("/repos", response_model=RepoListResponse)
+def list_repos(db: Session = Depends(get_db)) -> RepoListResponse:
+    repos = db.query(Repo).order_by(Repo.updated_at.desc()).limit(50).all()
+    usage_map = all_repo_usage_stats(db)
+    return RepoListResponse(
+        repos=[_repo_response(repo, usage_map.get(repo.id)) for repo in repos]
+    )
+
+
+@router.get("/usage", response_model=UsageOverviewResponse)
+def usage_overview(db: Session = Depends(get_db)) -> UsageOverviewResponse:
+    repos = db.query(Repo).order_by(Repo.updated_at.desc()).limit(50).all()
+    usage_map = all_repo_usage_stats(db)
+    total_unique = sum(s["unique_visitors"] for s in usage_map.values())
+    total_views = sum(s["total_views"] for s in usage_map.values())
+    return UsageOverviewResponse(
+        total_repos=len(repos),
+        total_unique_visitors=total_unique,
+        total_views=total_views,
+        repos=[_repo_response(repo, usage_map.get(repo.id)) for repo in repos],
+    )
+
+
 @router.post("/repos", response_model=RepoResponse, status_code=202)
 def create_repo(
     payload: RepoCreateRequest,
     background_tasks: BackgroundTasks,
+    session_id: str | None = Depends(get_optional_session_id),
     db: Session = Depends(get_db),
 ) -> RepoResponse:
     try:
@@ -111,10 +144,12 @@ def create_repo(
     repo = db.query(Repo).filter(Repo.url == normalized_url).first()
 
     if repo and repo.status == "ready":
-        return _repo_response(repo)
+        record_repo_visit(db, repo, session_id)
+        return _repo_response(repo, repo_usage_stats(db, repo.id))
 
     if repo and repo.status in {"pending", "indexing", "generating"}:
-        return _repo_response(repo)
+        record_repo_visit(db, repo, session_id)
+        return _repo_response(repo, repo_usage_stats(db, repo.id))
 
     if not repo:
         repo = Repo(url=normalized_url, owner=parsed.owner, name=parsed.name, status="pending")
@@ -128,15 +163,23 @@ def create_repo(
 
     background_tasks.add_task(_run_index_job, repo.id)
     db.refresh(repo)
-    return _repo_response(repo)
+    record_repo_visit(db, repo, session_id)
+    stats = repo_usage_stats(db, repo.id)
+    return _repo_response(repo, stats)
 
 
 @router.get("/repos/{repo_id}", response_model=RepoResponse)
-def get_repo(repo_id: str, db: Session = Depends(get_db)) -> RepoResponse:
+def get_repo(
+    repo_id: str,
+    session_id: str | None = Depends(get_optional_session_id),
+    db: Session = Depends(get_db),
+) -> RepoResponse:
     repo = db.query(Repo).filter(Repo.id == repo_id).first()
     if not repo:
         raise HTTPException(status_code=404, detail="Repository not found")
-    return _repo_response(repo)
+    record_repo_visit(db, repo, session_id)
+    stats = repo_usage_stats(db, repo.id)
+    return _repo_response(repo, stats)
 
 
 @router.get("/repos/{repo_id}/topics", response_model=TopicListResponse)

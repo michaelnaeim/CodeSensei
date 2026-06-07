@@ -64,7 +64,7 @@ See [backend/README.md](./backend/README.md) for setup and API docs for frontend
 
 CodeSensei is indexed on [perseus.computer](https://perseus.computer) under **michaelnaeim/CodeSensei**. We used Perseus to navigate our own codebase while building — the same “understand before you ship” loop the product teaches learners.
 
-**Index:** `4702a65e-bb4f-42a2-b4db-3b1239ec81c8` (66 files, 291 chunks)
+**Index:** `4702a65e-bb4f-42a2-b4db-3b1239ec81c8` (66 files, 292 chunks) · commit `44163f6`
 
 **Live query traces** (full MCTS tree in the Perseus console):
 

@@ -33,7 +33,7 @@ export function Navbar() {
             CS
           </div>
           <span className="font-[family-name:var(--font-syne)] font-bold text-lg tracking-tight">
-            Code<span className="text-[var(--accent-good)]">Sensi</span>
+            Code<span className="text-[var(--accent-good)]">Sensei</span>
           </span>
         </Link>
 

@@ -21,10 +21,18 @@ import { buildTopic, mapRepo } from "@/lib/api-mappers";
 import { useAppStore } from "@/lib/store";
 import type { Repo, Topic, TopicFile } from "@/types";
 
-const STEPS = [
+const MODES = [
+  { id: "learn", label: "Learn" },
+  { id: "practice", label: "Practice" },
+] as const;
+
+const LEARN_STEPS = [
   { id: "flashcards", label: "Flashcards" },
   { id: "lesson", label: "Lesson plan" },
   { id: "code", label: "Line notes" },
+];
+
+const PRACTICE_STEPS = [
   { id: "challenge", label: "Challenge" },
   { id: "quiz", label: "Official quiz" },
 ];
@@ -41,6 +49,7 @@ export default function LearnPage() {
   const [file, setFile] = useState<TopicFile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [mode, setMode] = useState<"learn" | "practice">("learn");
   const [step, setStep] = useState("flashcards");
   const [mounted, setMounted] = useState(false);
 
@@ -66,10 +75,10 @@ export default function LearnPage() {
         setFile(mappedFile ?? null);
 
         if (detail.challenge_passed) {
-          updateMastery({ repoId, topicId, fileId: mappedFile?.id ?? "main", challengeDone: true });
+          updateMastery({ repoId, topicId, fileId: mappedFile?.id ?? topicId, challengeDone: true });
         }
         if (detail.quiz_passed) {
-          updateMastery({ repoId, topicId, fileId: mappedFile?.id ?? "main", quizPassed: true, quizScore: 100 });
+          updateMastery({ repoId, topicId, fileId: mappedFile?.id ?? topicId, quizPassed: true, quizScore: 100 });
         }
       } catch (e) {
         setError(e instanceof Error ? e.message : "Failed to load lesson");
@@ -86,8 +95,9 @@ export default function LearnPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]">
-        <Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" />
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[var(--bg)] gap-3">
+        <Loader2 className="w-5 h-5 animate-spin text-[var(--accent)]" />
+        <p className="text-sm text-[var(--text-muted)]">Generating lesson…</p>
       </div>
     );
   }
@@ -125,7 +135,31 @@ export default function LearnPage() {
         <h1 className="font-[family-name:var(--font-jetbrains)] text-xl mb-1">{file.title}</h1>
         <p className="text-xs font-[family-name:var(--font-jetbrains)] text-[var(--text-muted)] mb-5">{file.path}</p>
 
-        <StepTabs steps={STEPS} active={step} onChange={setStep} completed={completed} />
+        <div className="flex gap-1 p-1 panel-inset mb-3">
+          {MODES.map((m) => (
+            <button
+              key={m.id}
+              onClick={() => {
+                setMode(m.id);
+                setStep(m.id === "learn" ? "flashcards" : "challenge");
+              }}
+              className={`flex-1 px-4 py-2 rounded-md text-sm font-medium cursor-pointer border transition-all ${
+                mode === m.id
+                  ? "mode-tab-active"
+                  : "text-[var(--text-secondary)] hover:text-[var(--text)] border-transparent"
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
+        <StepTabs
+          steps={mode === "learn" ? LEARN_STEPS : PRACTICE_STEPS}
+          active={step}
+          onChange={setStep}
+          completed={completed}
+        />
 
         <div className="panel p-6 mt-4 min-h-[420px]">
           {step === "flashcards" && (

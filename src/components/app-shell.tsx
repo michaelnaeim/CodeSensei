@@ -26,7 +26,7 @@ export function AppHeader({ repoName, backHref }: { repoName?: string; backHref?
             </Link>
           )}
           <Link href="/dashboard" className="font-[family-name:var(--font-jetbrains)] text-[14px] tracking-tight text-[var(--text)]">
-            codesensei
+            CodeSensei
           </Link>
           {repoName && (
             <>

@@ -1,9 +1,12 @@
+import asyncio
 import json
 
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.models import Repo, Topic
 from app.services.github import (
+    MANIFEST_FILES,
     GitHubService,
     RepoFile,
     detect_frameworks,
@@ -29,20 +32,26 @@ class IndexerService:
             branch = metadata.get("default_branch", "main")
             repo.default_branch = branch
 
-            files, file_tree, commit_sha = await self.github.fetch_archive_files(parsed, branch)
+            (files, file_tree, commit_sha), languages = await asyncio.gather(
+                self.github.fetch_archive_files(parsed, branch),
+                self.github.fetch_languages(parsed),
+            )
             repo.commit_sha = commit_sha
             repo.file_tree = file_tree
-            # Cache file content so content generation reuses it (no extra GitHub calls)
             repo.indexed_files = [
-                {"path": f.path, "size": f.size, "content": f.content[:20000]}
-                for f in files
+                {
+                    "path": f.path,
+                    "size": f.size,
+                    "content": f.content[: settings.max_cached_file_chars],
+                }
+                for f in files[: settings.max_cached_files]
             ]
 
-            repo.language_mix = await self._build_tech_stack(parsed, metadata, files)
+            repo.language_mix = self._build_tech_stack(metadata, languages, files)
             repo.status = "generating"
             db.commit()
 
-            topics_data = self._extract_topics(repo, files)
+            topics_data = await asyncio.to_thread(self._extract_topics, repo, files)
             db.query(Topic).filter(Topic.repo_id == repo.id).delete()
 
             for index, topic_data in enumerate(topics_data):
@@ -67,14 +76,13 @@ class IndexerService:
             db.commit()
             raise
 
-    async def _build_tech_stack(self, parsed, metadata: dict, files: list[RepoFile]) -> dict:
-        """Combine GitHub language byte-counts with detected frameworks."""
-        languages = await self.github.fetch_languages(parsed)
+    def _build_tech_stack(
+        self, metadata: dict, languages: dict[str, int], files: list[RepoFile]
+    ) -> dict:
         if not languages:
             primary = metadata.get("language")
             languages = {primary: 1} if primary else {}
 
-        # Keep top languages by byte count
         top_languages = dict(
             sorted(languages.items(), key=lambda kv: kv[1], reverse=True)[:6]
         )
@@ -87,11 +95,49 @@ class IndexerService:
             stack = {"unknown": 1}
         return stack
 
+    def _build_llm_file_bundle(self, files: list[RepoFile]) -> list[dict]:
+        """Small, high-signal bundle for the curriculum LLM — not the full repo."""
+        bundle: list[dict] = []
+        path_only: list[str] = []
+        snippet_budget = settings.max_files_for_llm
+
+        for file in files:
+            name = file.path.split("/")[-1].lower()
+            is_manifest = name in MANIFEST_FILES
+            is_readme = name.endswith(".md") and ("readme" in name or name == "contributing.md")
+
+            if is_manifest or is_readme:
+                bundle.append(
+                    {
+                        "path": file.path,
+                        "content": file.content[:6000],
+                    }
+                )
+                continue
+
+            if len(bundle) < snippet_budget:
+                bundle.append(
+                    {
+                        "path": file.path,
+                        "content": file.content[: settings.max_snippet_chars],
+                    }
+                )
+            else:
+                path_only.append(file.path)
+
+        if path_only:
+            bundle.append(
+                {
+                    "path": "__additional_paths__",
+                    "content": "\n".join(path_only[:100]),
+                }
+            )
+
+        return bundle[: settings.max_files_for_llm + 5]
+
     def _extract_topics(self, repo: Repo, files: list[RepoFile]) -> list[dict]:
-        file_bundle = []
-        for file in files[:120]:
-            snippet = file.content[:9000]
-            file_bundle.append({"path": file.path, "content": snippet})
+        file_bundle = self._build_llm_file_bundle(files)
+        max_topics = settings.max_topics
 
         system_prompt = (
             "You are CodeSensei, an expert computer science educator. "
@@ -99,12 +145,10 @@ class IndexerService:
             "Return strict JSON with shape: "
             '{"topics":[{"title":"","description":"","order":1,"difficulty":"beginner|intermediate|advanced",'
             '"estimated_minutes":20,"file_refs":["path/to/file"]}]}. '
-            "Create 12 to 18 fine-grained concepts ordered for learning. "
-            "Prefer specific, focused concepts (e.g. 'JWT Validation', 'Zod Schemas', "
-            "'Error Handling', 'URL Building') over broad umbrella topics. "
-            "Order them so foundational prerequisites come first and dependent concepts later. "
-            "Each concept must map to real files from the provided bundle. "
-            "Focus on concepts students can learn from this codebase."
+            f"Create {max(4, max_topics - 2)} to {max_topics} focused concepts ordered for learning. "
+            "Prefer specific concepts (e.g. 'JWT Validation', 'Route Handlers') over broad umbrellas. "
+            "Each concept must reference real paths from the provided files. "
+            "Keep descriptions concise."
         )
         user_prompt = json.dumps(
             {
@@ -115,8 +159,8 @@ class IndexerService:
             indent=2,
         )
 
-        result = self.llm.complete_json(system_prompt, user_prompt)
+        result = self.llm.complete_json(system_prompt, user_prompt, retries=1)
         topics = result.get("topics", [])
         if not topics:
             raise RuntimeError("LLM did not return any topics")
-        return topics
+        return topics[:max_topics]

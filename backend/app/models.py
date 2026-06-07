@@ -29,6 +29,22 @@ class Repo(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     topics: Mapped[list["Topic"]] = relationship(back_populates="repo", cascade="all, delete-orphan")
+    visits: Mapped[list["RepoVisit"]] = relationship(back_populates="repo", cascade="all, delete-orphan")
+
+
+class RepoVisit(Base):
+    __tablename__ = "repo_visits"
+    __table_args__ = (UniqueConstraint("repo_id", "session_id", name="uq_repo_session"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    repo_id: Mapped[str] = mapped_column(String(36), ForeignKey("repos.id"), index=True)
+    session_id: Mapped[str] = mapped_column(String(36), ForeignKey("anonymous_sessions.id"), index=True)
+    visit_count: Mapped[int] = mapped_column(Integer, default=1)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    repo: Mapped["Repo"] = relationship(back_populates="visits")
+    session: Mapped["AnonymousSession"] = relationship(back_populates="repo_visits")
 
 
 class Topic(Base):
@@ -73,6 +89,7 @@ class AnonymousSession(Base):
     progress: Mapped[list["TopicProgress"]] = relationship(
         back_populates="session", cascade="all, delete-orphan"
     )
+    repo_visits: Mapped[list["RepoVisit"]] = relationship(back_populates="session")
 
 
 class TopicProgress(Base):

@@ -60,7 +60,7 @@ export default function TopicPage() {
     return <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] text-[var(--text-muted)]">{error || "Topic not found"}</div>;
   }
 
-  const key = `${repoId}:${topicId}:main`;
+  const key = `${repoId}:${topicId}:${topicId}`;
   const entry = mastery[key];
 
   return (
@@ -80,7 +80,7 @@ export default function TopicPage() {
           <p className="text-sm text-[var(--text-muted)]">{topicDescription}</p>
         </div>
 
-        <Link href={`/learn/${repoId}/${topicId}/main`}>
+        <Link href={`/learn/${repoId}/${topicId}/${topicId}`}>
           <div className="panel p-5 flex items-center gap-4 hover:border-[var(--border-strong)] cursor-pointer group transition-colors">
             <div className="w-10 h-10 rounded-lg bg-[var(--accent-soft)] flex items-center justify-center">
               <FileCode className="w-5 h-5 text-[var(--accent)]" />

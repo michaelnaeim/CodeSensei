@@ -12,6 +12,11 @@ class RepoCreateRequest(BaseModel):
     url: str = Field(..., examples=["https://github.com/fastapi/fastapi"])
 
 
+class RepoUsageStats(BaseModel):
+    unique_visitors: int = 0
+    total_views: int = 0
+
+
 class RepoResponse(BaseModel):
     id: str
     url: str
@@ -24,6 +29,18 @@ class RepoResponse(BaseModel):
     file_tree: list[str] | None = None
     created_at: datetime
     updated_at: datetime
+    usage: RepoUsageStats = Field(default_factory=RepoUsageStats)
+
+
+class RepoListResponse(BaseModel):
+    repos: list[RepoResponse]
+
+
+class UsageOverviewResponse(BaseModel):
+    total_repos: int
+    total_unique_visitors: int
+    total_views: int
+    repos: list[RepoResponse]
 
 
 class TopicSummary(BaseModel):

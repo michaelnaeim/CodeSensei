@@ -79,10 +79,11 @@ class LLMService:
             response = model.generate_content(
                 user_prompt,
                 generation_config=genai.GenerationConfig(
-                    # Nudge temperature up on retries to break out of a bad generation.
                     temperature=0.2 + 0.1 * attempt,
                     response_mime_type="application/json",
+                    max_output_tokens=8192,
                 ),
+                request_options={"timeout": 90},
             )
             content = response.text or "{}"
             try:

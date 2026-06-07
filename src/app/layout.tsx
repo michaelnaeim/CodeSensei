@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { Inter, JetBrains_Mono, Space_Grotesk, Syne } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
@@ -19,6 +19,12 @@ const jetbrains = JetBrains_Mono({
   subsets: ["latin"],
 });
 
+const syne = Syne({
+  variable: "--font-syne",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+});
+
 export const metadata: Metadata = {
   title: "CodeSensei — Learn from real codebases",
   description:
@@ -29,7 +35,7 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${space.variable} ${jetbrains.variable} h-full dark`}>
+    <html lang="en" className={`${inter.variable} ${space.variable} ${jetbrains.variable} ${syne.variable} h-full dark`}>
       <body className="min-h-full antialiased bg-[var(--bg)]">
         <Providers>{children}</Providers>
       </body>

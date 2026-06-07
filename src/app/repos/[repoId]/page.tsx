@@ -1,13 +1,21 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Loader2, Settings } from "lucide-react";
 import { AppHeader, BottomProgress } from "@/components/app-shell";
 import { SummaryTab } from "@/components/repo/summary-tab";
 import { ArchitectureTab } from "@/components/repo/architecture-tab";
 import { KnowledgeMapTab } from "@/components/repo/knowledge-map-tab";
-import { getRepo, getTopics, type BackendRepo, type BackendTopic } from "@/lib/api";
+import {
+  getRepo,
+  getTopics,
+  removeRecentRepo,
+  saveRecentRepo,
+  type BackendRepo,
+  type BackendTopic,
+} from "@/lib/api";
 import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -44,6 +52,7 @@ export default function RepoPage() {
         setRepo(repoData);
 
         if (repoData.status === "ready") {
+          saveRecentRepo(repoData);
           const topicsData = await getTopics(repoId);
           if (!cancelled) setTopics(topicsData);
         } else if (["pending", "indexing", "generating"].includes(repoData.status)) {
@@ -52,7 +61,15 @@ export default function RepoPage() {
           setError(repoData.error_message ?? "Indexing failed");
         }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Failed to load");
+        if (!cancelled) {
+          const msg = e instanceof Error ? e.message : "Failed to load";
+          if (msg.includes("not found") || msg.includes("404")) {
+            removeRecentRepo(repoId);
+            setError("Repository not found. It may have been removed — try adding it again.");
+          } else {
+            setError(msg);
+          }
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -70,6 +87,7 @@ export default function RepoPage() {
         setRepo(data);
         if (data.status === "ready") {
           setPolling(false);
+          saveRecentRepo(data);
           const topicsData = await getTopics(repoId);
           if (!cancelled) setTopics(topicsData);
         } else if (data.status === "failed") {
@@ -77,7 +95,7 @@ export default function RepoPage() {
           setError(data.error_message ?? "Indexing failed");
         }
       } catch { /* retry */ }
-    }, 2500);
+    }, 1500);
     return () => { cancelled = true; clearInterval(interval); };
   }, [polling, repoId]);
 
@@ -106,14 +124,22 @@ export default function RepoPage() {
 
   const repoName = repo ? `${repo.owner}/${repo.name}` : "";
 
+  const statusMessage =
+    repo?.status === "generating"
+      ? "Generating lessons…"
+      : repo?.status === "indexing"
+      ? "Analyzing architecture…"
+      : "Preparing knowledge map…";
+
   if (polling) {
     return (
       <div className="min-h-screen bg-[var(--bg)]">
         <AppHeader repoName={repoName} backHref="/dashboard" />
         <div className="flex flex-col items-center justify-center pt-32 gap-4">
           <Loader2 className="w-6 h-6 animate-spin text-[var(--accent)]" />
-          <p className="text-sm text-[var(--text-muted)]">
-            Indexing {repoName}… {repo?.status}
+          <p className="text-sm text-[var(--text)]">{statusMessage}</p>
+          <p className="text-xs text-[var(--text-muted)]">
+            {repoName} · {repo?.status}
           </p>
           <p className="text-xs text-[var(--text-muted)]">This may take a minute for large repos</p>
         </div>
@@ -144,18 +170,22 @@ export default function RepoPage() {
             {tab.icon} {tab.label}
           </button>
         ))}
-        <button className="ml-4 text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer">
+        <Link
+          href="/settings"
+          className="ml-4 text-[var(--text-muted)] hover:text-[var(--text)] cursor-pointer"
+        >
           <Settings className="w-4 h-4" />
-        </button>
+        </Link>
       </div>
 
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-h-0 pb-10">
         {activeTab === "summary" && (
           <SummaryTab
             repoName={repoName}
             description={`Learn from ${repoName} — ${topics.length} topics extracted from the codebase. Explore the architecture, understand data flows, and master each concept through guided lessons.`}
             techStack={repo?.language_mix ? Object.keys(repo.language_mix) : []}
             topicCount={topics.length}
+            usage={repo?.usage ?? { unique_visitors: 0, total_views: 0 }}
             onSwitchToArchitecture={() => setActiveTab("architecture")}
             onSwitchToKnowledgeMap={() => setActiveTab("knowledge")}
           />
@@ -167,6 +197,11 @@ export default function RepoPage() {
           <KnowledgeMapTab
             topics={topics}
             repoId={repoId}
+            techCount={
+              repo?.language_mix
+                ? Object.keys(repo.language_mix).length
+                : new Set(topics.flatMap((t) => t.file_refs.map((f) => f.split(".").pop()))).size
+            }
             onStartLesson={handleStartLesson}
           />
         )}

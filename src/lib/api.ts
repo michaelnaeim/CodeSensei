@@ -3,6 +3,11 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 const SESSION_KEY = "codesensei-session-id";
 const RECENT_REPOS_KEY = "codesensei-recent-repos";
 
+export interface RepoUsageStats {
+  unique_visitors: number;
+  total_views: number;
+}
+
 export interface BackendRepo {
   id: string;
   url: string;
@@ -15,6 +20,14 @@ export interface BackendRepo {
   file_tree: string[] | null;
   created_at: string;
   updated_at: string;
+  usage: RepoUsageStats;
+}
+
+export interface UsageOverview {
+  total_repos: number;
+  total_unique_visitors: number;
+  total_views: number;
+  repos: BackendRepo[];
 }
 
 export interface BackendTopic {
@@ -135,9 +148,42 @@ export function saveRecentRepo(repo: BackendRepo) {
     url: repo.url,
     owner: repo.owner,
     name: repo.name,
-    analyzedAt: new Date().toISOString(),
+    analyzedAt: repo.updated_at ?? new Date().toISOString(),
   });
   localStorage.setItem(RECENT_REPOS_KEY, JSON.stringify(recent.slice(0, 20)));
+}
+
+export function removeRecentRepo(repoId: string) {
+  const recent = getRecentRepos().filter((r) => r.id !== repoId);
+  localStorage.setItem(RECENT_REPOS_KEY, JSON.stringify(recent));
+}
+
+export async function listRepos(): Promise<BackendRepo[]> {
+  const data = await request<{ repos: BackendRepo[] }>("/repos");
+  return data.repos;
+}
+
+export async function getUsageOverview(): Promise<UsageOverview> {
+  return request<UsageOverview>("/usage");
+}
+
+/** Drop local entries that no longer exist on the backend (e.g. after DB reset). */
+export async function syncRecentRepos(): Promise<RecentRepo[]> {
+  try {
+    const remote = await listRepos();
+    const remoteIds = new Set(remote.map((r) => r.id));
+    const local = getRecentRepos().filter((r) => remoteIds.has(r.id));
+    localStorage.setItem(RECENT_REPOS_KEY, JSON.stringify(local));
+
+    for (const repo of remote) {
+      if (repo.status === "ready" && !local.some((r) => r.id === repo.id)) {
+        saveRecentRepo(repo);
+      }
+    }
+    return getRecentRepos();
+  } catch {
+    return getRecentRepos();
+  }
 }
 
 export async function createRepo(url: string): Promise<BackendRepo> {
