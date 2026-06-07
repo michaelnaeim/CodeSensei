@@ -59,3 +59,22 @@ Open [http://localhost:3000](http://localhost:3000), click **Try demo**, paste a
 ## Backend
 
 See [backend/README.md](./backend/README.md) for setup and API docs for frontend integration.
+
+## Built with Perseus
+
+CodeSensei is indexed on [perseus.computer](https://perseus.computer) under **michaelnaeim/CodeSensei**. We used Perseus to navigate our own codebase while building — the same “understand before you ship” loop the product teaches learners.
+
+**Index:** `4702a65e-bb4f-42a2-b4db-3b1239ec81c8` (66 files, 291 chunks)
+
+**Live query traces** (full MCTS tree in the Perseus console):
+
+| Build milestone | Console run |
+|-----------------|-------------|
+| Knowledge map layout | [qry-936a99f09cdd](https://perseus.computer/console/runs/qry-936a99f09cdd) |
+| React Flow blank canvas fix | [qry-c8875478c55d](https://perseus.computer/console/runs/qry-c8875478c55d) |
+| `flow-shell.tsx` height + fitView | [qry-46c92143b1eb](https://perseus.computer/console/runs/qry-46c92143b1eb) |
+| Indexer performance | [qry-7d0dba9feead](https://perseus.computer/console/runs/qry-7d0dba9feead) |
+| Usage tracking | [qry-143b39751400](https://perseus.computer/console/runs/qry-143b39751400) |
+| Gemini API key config | [qry-ace8e75010d3](https://perseus.computer/console/runs/qry-ace8e75010d3) |
+
+Full build log: [docs/perseus-build-log.jsonl](./docs/perseus-build-log.jsonl)
