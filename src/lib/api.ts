@@ -11,6 +11,8 @@ export interface BackendRepo {
   status: "pending" | "indexing" | "generating" | "ready" | "failed";
   error_message: string | null;
   topic_count: number;
+  language_mix: Record<string, number> | null;
+  file_tree: string[] | null;
   created_at: string;
   updated_at: string;
 }

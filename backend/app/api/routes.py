@@ -59,6 +59,8 @@ def _repo_response(repo: Repo) -> RepoResponse:
         status=repo.status,
         error_message=repo.error_message,
         topic_count=len(repo.topics),
+        language_mix=repo.language_mix,
+        file_tree=repo.file_tree,
         created_at=repo.created_at,
         updated_at=repo.updated_at,
     )

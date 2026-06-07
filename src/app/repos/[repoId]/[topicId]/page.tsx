@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { FileCode, Loader2 } from "lucide-react";
-import { AppHeader, Breadcrumbs, MasteryRing } from "@/components/app-shell";
-import { Card, ProgressBar, Badge } from "@/components/ui/card";
+import { ArrowRight, FileCode, Loader2 } from "lucide-react";
+import { AppHeader, Breadcrumbs } from "@/components/app-shell";
+import { Badge, ProgressBar } from "@/components/ui/card";
 import { getRepo, getTopicDetail } from "@/lib/api";
 import { mapRepo } from "@/lib/api-mappers";
 import { useAppStore } from "@/lib/store";
@@ -17,8 +16,7 @@ export default function TopicPage() {
   const repoId = params.repoId as string;
   const topicId = params.topicId as string;
   const router = useRouter();
-  const { data: session, status } = useSession();
-  const { user, mastery } = useAppStore();
+  const { user, mastery, setDemoUser } = useAppStore();
   const [repo, setRepo] = useState<Repo | null>(null);
   const [topicTitle, setTopicTitle] = useState("");
   const [topicDescription, setTopicDescription] = useState("");
@@ -29,10 +27,7 @@ export default function TopicPage() {
   const [error, setError] = useState("");
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => setMounted(true), []);
-  useEffect(() => {
-    if (mounted && status === "unauthenticated" && !user) router.push("/");
-  }, [mounted, status, user, router]);
+  useEffect(() => { setMounted(true); if (!user) setDemoUser(); }, [user, setDemoUser]);
 
   useEffect(() => {
     if (!mounted) return;
@@ -55,24 +50,23 @@ export default function TopicPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-[var(--accent)]" />
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]">
+        <Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" />
       </div>
     );
   }
 
   if (error || !repo) {
-    return <div className="min-h-screen flex items-center justify-center">{error || "Topic not found"}</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] text-[var(--text-muted)]">{error || "Topic not found"}</div>;
   }
 
   const key = `${repoId}:${topicId}:main`;
   const entry = mastery[key];
-  const topicMastery = entry?.mastery ?? (cleared ? 100 : 0);
 
   return (
-    <>
-      <AppHeader />
-      <main className="max-w-4xl mx-auto px-5 py-8">
+    <div className="min-h-screen bg-[var(--bg)]">
+      <AppHeader repoName={repo.fullName} backHref={`/repos/${repoId}`} />
+      <main className="max-w-3xl mx-auto px-5 py-8">
         <Breadcrumbs
           items={[
             { label: "Repos", href: "/dashboard" },
@@ -81,49 +75,47 @@ export default function TopicPage() {
           ]}
         />
 
-        <div className="flex items-start justify-between mt-4 mb-6">
-          <div>
-            <h1 className="font-[family-name:var(--font-space)] text-2xl font-bold">{topicTitle}</h1>
-            <p className="text-[var(--text-secondary)] mt-1">{topicDescription}</p>
-          </div>
-          <MasteryRing value={Math.round(topicMastery)} />
+        <div className="mt-6 mb-8">
+          <h1 className="font-[family-name:var(--font-jetbrains)] text-2xl mb-2">{topicTitle}</h1>
+          <p className="text-sm text-[var(--text-muted)]">{topicDescription}</p>
         </div>
 
-        <div className="space-y-3">
-          <Link href={`/learn/${repoId}/${topicId}/main`}>
-            <Card className="flex items-center gap-4 hover:border-[var(--accent)]/50 cursor-pointer group">
-              <div className="w-10 h-10 rounded-lg bg-[var(--accent-soft)] flex items-center justify-center">
-                <FileCode className="w-5 h-5 text-[var(--accent)]" />
-              </div>
-              <div className="flex-1">
-                <p className="font-semibold group-hover:text-[var(--accent)]">Start learning</p>
-                <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                  Flashcards · lesson · code notes · challenge · quiz · {estimatedMinutes} min
-                </p>
-                <div className="flex items-center gap-2 mt-2">
-                  <ProgressBar value={entry?.mastery ?? 0} className="flex-1 max-w-[200px]" />
-                  {(entry?.quizPassed && entry?.challengeDone) || cleared ? (
-                    <Badge variant="success">Cleared</Badge>
-                  ) : null}
-                </div>
-              </div>
-            </Card>
-          </Link>
-
-          {fileRefs.length > 0 && (
-            <div className="panel p-4">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[var(--text-muted)] mb-2">
-                Source files in this topic
-              </p>
-              <ul className="space-y-1">
-                {fileRefs.map((ref) => (
-                  <li key={ref} className="text-sm font-mono text-[var(--text-secondary)]">{ref}</li>
-                ))}
-              </ul>
+        <Link href={`/learn/${repoId}/${topicId}/main`}>
+          <div className="panel p-5 flex items-center gap-4 hover:border-[var(--border-strong)] cursor-pointer group transition-colors">
+            <div className="w-10 h-10 rounded-lg bg-[var(--accent-soft)] flex items-center justify-center">
+              <FileCode className="w-5 h-5 text-[var(--accent)]" />
             </div>
-          )}
-        </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-[var(--text)] group-hover:text-white">Start learning</p>
+                <ArrowRight className="w-3.5 h-3.5 text-[var(--text-muted)] opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              <p className="text-xs text-[var(--text-muted)] mt-0.5">
+                Flashcards · lesson · code notes · challenge · quiz · {estimatedMinutes} min
+              </p>
+              <div className="flex items-center gap-2 mt-2">
+                <ProgressBar value={entry?.mastery ?? 0} className="flex-1 max-w-[200px]" />
+                {(entry?.quizPassed && entry?.challengeDone) || cleared ? (
+                  <Badge variant="success">Cleared</Badge>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </Link>
+
+        {fileRefs.length > 0 && (
+          <div className="mt-4 panel p-4">
+            <p className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)] mb-2">
+              Source files
+            </p>
+            <ul className="space-y-1">
+              {fileRefs.map((ref) => (
+                <li key={ref} className="text-xs font-[family-name:var(--font-jetbrains)] text-[var(--text-secondary)]">{ref}</li>
+              ))}
+            </ul>
+          </div>
+        )}
       </main>
-    </>
+    </div>
   );
 }

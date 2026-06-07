@@ -3,9 +3,8 @@
 import { CheckCircle2, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import type { LessonPlan, TopicFile } from "@/types";
+import type { TopicFile } from "@/types";
 
-/** Remora-style split: objectives left, source code right */
 export function LessonSplitView({
   file,
   onComplete,
@@ -25,29 +24,31 @@ export function LessonSplitView({
 
       <div className="grid lg:grid-cols-2 gap-4">
         <div className="panel p-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--accent)] mb-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-[var(--accent)] mb-3">
             What you&apos;ll learn
           </p>
           <ul className="space-y-2.5">
             {lesson.objectives.map((obj) => (
-              <li key={obj.id} className="flex gap-2 text-sm">
+              <li key={obj.id} className="flex gap-2 text-sm text-[var(--text-secondary)]">
                 <CheckCircle2 className="w-4 h-4 text-[var(--success)] shrink-0 mt-0.5" />
                 {obj.text}
               </li>
             ))}
           </ul>
-          <div className="mt-5 pt-5 border-t border-[var(--border)] space-y-3">
-            {lesson.concepts.map((c) => (
-              <div key={c.title}>
-                <p className="text-sm font-semibold">{c.title}</p>
-                <p className="text-xs text-[var(--text-secondary)] mt-0.5">{c.description}</p>
-              </div>
-            ))}
-          </div>
+          {lesson.concepts.length > 0 && (
+            <div className="mt-5 pt-5 border-t border-[var(--border)] space-y-3">
+              {lesson.concepts.map((c) => (
+                <div key={c.title}>
+                  <p className="text-sm font-semibold text-[var(--text)]">{c.title}</p>
+                  <p className="text-xs text-[var(--text-muted)] mt-0.5">{c.description}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="rounded-lg overflow-hidden border border-[var(--border)]">
-          <div className="px-3 py-2 bg-[var(--bg-code)] border-b border-zinc-700 text-xs text-zinc-400 font-mono">
+          <div className="px-3 py-2 bg-[var(--bg-muted)] border-b border-[var(--border)] text-xs text-[var(--text-muted)] font-[family-name:var(--font-jetbrains)]">
             {file.path}
           </div>
           <pre className="p-4 bg-[var(--bg-code)] text-[11px] leading-5 font-mono text-zinc-300 overflow-auto max-h-[360px]">
@@ -64,7 +65,7 @@ export function LessonSplitView({
         </div>
       </div>
 
-      <Button variant="primary" className="w-full" onClick={onComplete}>
+      <Button variant="secondary" className="w-full" onClick={onComplete}>
         Continue to line-by-line notes
       </Button>
     </div>

@@ -19,7 +19,7 @@ export function FlashcardDeck({ cards, onComplete }: { cards: Flashcard[]; onCom
 
   return (
     <div className="max-w-lg mx-auto">
-      <p className="text-sm text-[var(--text-secondary)] text-center mb-4">
+      <p className="text-sm text-[var(--text-muted)] text-center mb-4">
         Card {index + 1} of {cards.length}
       </p>
 
@@ -28,12 +28,12 @@ export function FlashcardDeck({ cards, onComplete }: { cards: Flashcard[]; onCom
           className={`flashcard-3d relative w-full h-full cursor-pointer ${flipped ? "flipped" : ""}`}
           onClick={() => setFlipped(!flipped)}
         >
-          <div className="flashcard-face absolute inset-0 panel flex items-center justify-center p-8 text-center shadow-md">
-            <p className="text-lg font-medium">{card.front}</p>
+          <div className="flashcard-face absolute inset-0 panel flex items-center justify-center p-8 text-center">
+            <p className="text-lg font-medium text-[var(--text)]">{card.front}</p>
             <p className="absolute bottom-4 text-xs text-[var(--text-muted)]">Tap to flip</p>
           </div>
-          <div className="flashcard-face flashcard-back absolute inset-0 panel flex items-center justify-center p-8 text-center shadow-md bg-[var(--accent-soft)]">
-            <p className="text-base leading-relaxed">{card.back}</p>
+          <div className="flashcard-face flashcard-back absolute inset-0 panel flex items-center justify-center p-8 text-center bg-[var(--accent-soft)] border-[var(--accent)]/30">
+            <p className="text-base leading-relaxed text-[var(--text)]">{card.back}</p>
           </div>
         </div>
       </div>
@@ -45,7 +45,7 @@ export function FlashcardDeck({ cards, onComplete }: { cards: Flashcard[]; onCom
         <Button variant="ghost" size="sm" onClick={() => setFlipped(!flipped)}>
           <RotateCcw className="w-4 h-4" /> Flip
         </Button>
-        <Button variant="primary" size="sm" onClick={next}>
+        <Button variant="secondary" size="sm" onClick={next}>
           {index === cards.length - 1 ? "Done" : "Next"} <ChevronRight className="w-4 h-4" />
         </Button>
       </div>

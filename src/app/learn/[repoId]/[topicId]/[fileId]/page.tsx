@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { Award, Loader2 } from "lucide-react";
 import { AppHeader, Breadcrumbs, MasteryRing, StepTabs } from "@/components/app-shell";
 import { FlashcardDeck } from "@/components/learn/flashcard-deck";
@@ -36,8 +35,7 @@ export default function LearnPage() {
   const topicId = params.topicId as string;
   const fileId = params.fileId as string;
   const router = useRouter();
-  const { data: session, status } = useSession();
-  const { user, mastery, updateMastery } = useAppStore();
+  const { user, mastery, updateMastery, setDemoUser } = useAppStore();
   const [repo, setRepo] = useState<Repo | null>(null);
   const [topic, setTopic] = useState<Topic | null>(null);
   const [file, setFile] = useState<TopicFile | null>(null);
@@ -46,10 +44,7 @@ export default function LearnPage() {
   const [step, setStep] = useState("flashcards");
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => setMounted(true), []);
-  useEffect(() => {
-    if (mounted && status === "unauthenticated" && !user) router.push("/");
-  }, [mounted, status, user, router]);
+  useEffect(() => { setMounted(true); if (!user) setDemoUser(); }, [user, setDemoUser]);
 
   useEffect(() => {
     if (!mounted) return;
@@ -91,14 +86,14 @@ export default function LearnPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-6 h-6 animate-spin text-[var(--accent)]" />
+      <div className="min-h-screen flex items-center justify-center bg-[var(--bg)]">
+        <Loader2 className="w-5 h-5 animate-spin text-[var(--text-muted)]" />
       </div>
     );
   }
 
   if (error || !repo || !topic || !file) {
-    return <div className="min-h-screen flex items-center justify-center">{error || "Lesson not found"}</div>;
+    return <div className="min-h-screen flex items-center justify-center bg-[var(--bg)] text-[var(--text-muted)]">{error || "Lesson not found"}</div>;
   }
 
   const completed = {
@@ -113,13 +108,12 @@ export default function LearnPage() {
   const moduleCleared = entry?.challengeDone && entry?.quizPassed;
 
   return (
-    <>
-      <AppHeader />
+    <div className="min-h-screen bg-[var(--bg)]">
+      <AppHeader repoName={repo.fullName} backHref={`/repos/${repoId}/${topicId}`} />
       <main className="max-w-5xl mx-auto px-5 py-6">
         <div className="flex items-center justify-between mb-4">
           <Breadcrumbs
             items={[
-              { label: "Repos", href: "/dashboard" },
               { label: repo.name, href: `/repos/${repoId}` },
               { label: topic.title, href: `/repos/${repoId}/${topicId}` },
               { label: file.title },
@@ -128,8 +122,8 @@ export default function LearnPage() {
           <MasteryRing value={entry?.mastery ?? 0} />
         </div>
 
-        <h1 className="font-[family-name:var(--font-space)] text-xl font-bold mb-1">{file.title}</h1>
-        <p className="text-sm font-mono text-[var(--text-muted)] mb-5">{file.path}</p>
+        <h1 className="font-[family-name:var(--font-jetbrains)] text-xl mb-1">{file.title}</h1>
+        <p className="text-xs font-[family-name:var(--font-jetbrains)] text-[var(--text-muted)] mb-5">{file.path}</p>
 
         <StepTabs steps={STEPS} active={step} onChange={setStep} completed={completed} />
 
@@ -182,7 +176,7 @@ export default function LearnPage() {
         </div>
 
         {moduleCleared && (
-          <div className="mt-4 panel p-4 flex items-center gap-3 bg-[var(--success-soft)] border-green-200">
+          <div className="mt-4 panel p-4 flex items-center gap-3 border-green-800/40">
             <Award className="w-6 h-6 text-[var(--success)]" />
             <div>
               <p className="font-semibold text-[var(--success)]">Module cleared!</p>
@@ -196,6 +190,6 @@ export default function LearnPage() {
           </div>
         )}
       </main>
-    </>
+    </div>
   );
 }

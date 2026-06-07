@@ -20,6 +20,8 @@ class RepoResponse(BaseModel):
     status: Literal["pending", "indexing", "generating", "ready", "failed"]
     error_message: str | None = None
     topic_count: int = 0
+    language_mix: dict | None = None
+    file_tree: list[str] | None = None
     created_at: datetime
     updated_at: datetime
 
