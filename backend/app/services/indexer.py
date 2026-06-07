@@ -72,8 +72,11 @@ class IndexerService:
             "Return strict JSON with shape: "
             '{"topics":[{"title":"","description":"","order":1,"difficulty":"beginner|intermediate|advanced",'
             '"estimated_minutes":20,"file_refs":["path/to/file"]}]}. '
-            "Create 5 to 10 topics ordered for learning. "
-            "Each topic must map to real files from the provided bundle. "
+            "Create 12 to 18 fine-grained concepts ordered for learning. "
+            "Prefer specific, focused concepts (e.g. 'JWT Validation', 'Zod Schemas', "
+            "'Error Handling', 'URL Building') over broad umbrella topics. "
+            "Order them so foundational prerequisites come first and dependent concepts later. "
+            "Each concept must map to real files from the provided bundle. "
             "Focus on concepts students can learn from this codebase."
         )
         user_prompt = json.dumps(
