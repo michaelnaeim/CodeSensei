@@ -1,7 +1,9 @@
 import asyncio
 import base64
+import io
 import json
 import re
+import tarfile
 from dataclasses import dataclass
 
 import httpx
@@ -186,6 +188,63 @@ class GitHubService:
             tree_response.raise_for_status()
             tree = tree_response.json()["tree"]
             return [item for item in tree if item["type"] == "blob" and not _should_skip_path(item["path"])], commit_sha
+
+    async def fetch_archive_files(
+        self, parsed: ParsedRepoUrl, branch: str
+    ) -> tuple[list[RepoFile], list[str], str | None]:
+        """Download the entire repo as a single tarball and extract the
+        most relevant files locally. Uses ~1 API request instead of one
+        per file, avoiding GitHub rate limits."""
+        url = f"{self.base_url}/repos/{parsed.full_name}/tarball/{branch}"
+        async with httpx.AsyncClient(timeout=180.0, follow_redirects=True) as client:
+            response = await client.get(url, headers=_headers())
+            response.raise_for_status()
+            data = response.content
+
+        return await asyncio.to_thread(self._parse_archive, data)
+
+    def _parse_archive(self, data: bytes) -> tuple[list[RepoFile], list[str], str | None]:
+        tar = tarfile.open(fileobj=io.BytesIO(data), mode="r:gz")
+        try:
+            members = [m for m in tar.getmembers() if m.isfile()]
+            if not members:
+                return [], [], None
+
+            root = members[0].name.split("/", 1)[0]
+            sha_match = re.search(r"-([0-9a-f]{7,40})$", root)
+            commit_sha = sha_match.group(1) if sha_match else None
+
+            def strip_root(name: str) -> str:
+                parts = name.split("/", 1)
+                return parts[1] if len(parts) > 1 else name
+
+            path_members: dict[str, tarfile.TarInfo] = {}
+            for m in members:
+                rel = strip_root(m.name)
+                if rel and not _should_skip_path(rel):
+                    path_members[rel] = m
+
+            file_tree = sorted(path_members.keys())
+
+            candidates = [
+                path for path, m in path_members.items()
+                if m.size <= settings.max_file_size_bytes
+            ]
+            ranked = sorted(candidates, key=_file_priority, reverse=True)[
+                : settings.max_files_to_index
+            ]
+
+            files: list[RepoFile] = []
+            for path in ranked:
+                extracted = tar.extractfile(path_members[path])
+                if not extracted:
+                    continue
+                decoded = extracted.read().decode("utf-8", errors="replace")
+                files.append(RepoFile(path=path, content=decoded, size=len(decoded)))
+
+            return files, file_tree, commit_sha
+        finally:
+            tar.close()
 
     async def fetch_languages(self, parsed: ParsedRepoUrl) -> dict[str, int]:
         async with httpx.AsyncClient(timeout=30.0) as client:

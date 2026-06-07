@@ -26,7 +26,7 @@ from app.schemas import (
     Flashcard,
     QuizQuestion,
 )
-from app.services.generator import GeneratorService
+from app.services.generator import GeneratorService, get_topic_files
 from app.services.github import parse_github_url
 from app.services.grader import GraderService
 from app.services.indexer import IndexerService
@@ -195,8 +195,7 @@ async def get_topic_code(topic_id: str, db: Session = Depends(get_db)) -> TopicC
 
     content = await generator.ensure_topic_content(db, topic)
     repo = db.query(Repo).filter(Repo.id == topic.repo_id).one()
-    parsed = parse_github_url(repo.url)
-    files = await generator.github.fetch_file_contents(parsed, topic.file_refs[:5])
+    files = await get_topic_files(generator.github, repo, topic.file_refs[:5])
 
     annotations_by_file: dict[str, list[CodeAnnotation]] = {}
     for item in content.annotations:

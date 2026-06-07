@@ -29,13 +29,14 @@ class IndexerService:
             branch = metadata.get("default_branch", "main")
             repo.default_branch = branch
 
-            tree, commit_sha = await self.github.fetch_tree(parsed, branch)
+            files, file_tree, commit_sha = await self.github.fetch_archive_files(parsed, branch)
             repo.commit_sha = commit_sha
-            repo.file_tree = [item["path"] for item in tree]
-
-            selected_paths = self.github.select_files_for_indexing(tree)
-            files = await self.github.fetch_file_contents(parsed, selected_paths)
-            repo.indexed_files = [{"path": f.path, "size": f.size} for f in files]
+            repo.file_tree = file_tree
+            # Cache file content so content generation reuses it (no extra GitHub calls)
+            repo.indexed_files = [
+                {"path": f.path, "size": f.size, "content": f.content[:20000]}
+                for f in files
+            ]
 
             repo.language_mix = await self._build_tech_stack(parsed, metadata, files)
             repo.status = "generating"
