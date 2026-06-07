@@ -151,7 +151,7 @@ class GitHubService:
         self.base_url = "https://api.github.com"
 
     async def fetch_repo_metadata(self, parsed: ParsedRepoUrl) -> dict:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
             response = await client.get(
                 f"{self.base_url}/repos/{parsed.full_name}",
                 headers=_headers(),
@@ -165,7 +165,7 @@ class GitHubService:
             return data
 
     async def fetch_tree(self, parsed: ParsedRepoUrl, branch: str) -> list[dict]:
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
             ref_response = await client.get(
                 f"{self.base_url}/repos/{parsed.full_name}/git/ref/heads/{branch}",
                 headers=_headers(),
@@ -247,7 +247,7 @@ class GitHubService:
             tar.close()
 
     async def fetch_languages(self, parsed: ParsedRepoUrl) -> dict[str, int]:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
             response = await client.get(
                 f"{self.base_url}/repos/{parsed.full_name}/languages",
                 headers=_headers(),
@@ -282,7 +282,7 @@ class GitHubService:
                     decoded = content or ""
                 return RepoFile(path=path, content=decoded, size=len(decoded))
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
+        async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
             results = await asyncio.gather(*(fetch_one(client, p) for p in paths))
         return [f for f in results if f is not None]
 
