@@ -67,18 +67,29 @@ class LLMService:
                     in_string = True
         return "".join(out)
 
-    def complete_json(self, system_prompt: str, user_prompt: str) -> Any:
+    def complete_json(self, system_prompt: str, user_prompt: str, retries: int = 2) -> Any:
         self._ensure_configured()
         model = genai.GenerativeModel(
             self.model_name,
             system_instruction=system_prompt,
         )
-        response = model.generate_content(
-            user_prompt,
-            generation_config=genai.GenerationConfig(
-                temperature=0.2,
-                response_mime_type="application/json",
-            ),
+
+        last_error: Exception | None = None
+        for attempt in range(retries + 1):
+            response = model.generate_content(
+                user_prompt,
+                generation_config=genai.GenerationConfig(
+                    # Nudge temperature up on retries to break out of a bad generation.
+                    temperature=0.2 + 0.1 * attempt,
+                    response_mime_type="application/json",
+                ),
+            )
+            content = response.text or "{}"
+            try:
+                return self._extract_json(content)
+            except json.JSONDecodeError as exc:
+                last_error = exc
+
+        raise RuntimeError(
+            f"LLM returned invalid JSON after {retries + 1} attempts: {last_error}"
         )
-        content = response.text or "{}"
-        return self._extract_json(content)

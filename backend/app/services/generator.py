@@ -80,7 +80,13 @@ class GeneratorService:
             indent=2,
         )
 
-        result = self.llm.complete_json(system_prompt, user_prompt)
+        try:
+            result = self.llm.complete_json(system_prompt, user_prompt)
+        except Exception:
+            topic.content_status = "failed"
+            db.commit()
+            raise
+
         content = TopicContent(
             topic_id=topic.id,
             lesson=result.get("lesson", ""),
