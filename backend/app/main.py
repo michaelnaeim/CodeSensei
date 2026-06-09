@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.routes import router
+from app.config import settings
 from app.database import Base, engine
 
 
@@ -23,10 +24,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=settings.cors_origins,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,6 +38,11 @@ async def unhandled_exception_handler(_: Request, exc: Exception):
         status_code=500,
         content={"detail": str(exc)},
     )
+
+
+@app.get("/")
+async def root() -> dict:
+    return {"status": "ok", "service": "CodeSensei API"}
 
 
 app.include_router(router, prefix="/api")

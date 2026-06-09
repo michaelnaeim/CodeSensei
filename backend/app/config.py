@@ -18,5 +18,16 @@ class Settings(BaseSettings):
     max_cached_file_chars: int = 10_000
     max_cached_files: int = 50
 
+    # Comma-separated list of allowed frontend origins for CORS.
+    # Use "*" to allow any origin (safe here since credentials are disabled).
+    allowed_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+
+    @property
+    def cors_origins(self) -> list[str]:
+        value = self.allowed_origins.strip()
+        if value == "*":
+            return ["*"]
+        return [origin.strip() for origin in value.split(",") if origin.strip()]
+
 
 settings = Settings()
